@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Template React App 
+
+Resources:
+  Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - amplify.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess-Amplify
+
+  App:
+    Type: AWS::Amplify::App
+    Properties:
+      Name: Template App
+      Description: This is a template 
+      Repository: https://github.com/jhiggs15/AMC
+      AccessToken: !Sub '{{resolve:ssm:github}}'
+      IAMServiceRole: !GetAtt Role.Arn
+      EnableBranchAutoDeletion: true
+      AutoBranchCreationConfig:
+        EnablePullRequestPreview: false
+      EnvironmentVariables:
+        - Name: Test 
+          Value: "Hello World!"
+      BuildSpec: "
+        version: 1
+        frontend:
+          phases:
+            preBuild:
+              commands:
+                - npm ci
+            build:
+              commands:
+                - npm run build
+          artifacts:
+            baseDirectory: /dist
+            files:
+              - '**/*'
+          cache:
+            paths:
+              - node_modules/**/*"
+
+  Branch:
+    Type: AWS::Amplify::Branch
+    Properties:
+      BranchName: main 
+      AppId: !GetAtt App.AppId
+      Description: Prod 
+      EnableAutoBuild: true
+      EnablePullRequestPreview: false
+      Stage: PRODUCTION
